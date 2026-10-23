@@ -1019,3 +1019,15 @@ EPFLcut_cavlc_n6_2的7边下界已完成独立认证。两种partition编码分�
 这里的forest结论针对成本最小化或≤预算问题，允许删去冗余控制边；不表示每个强制精确literal multiplicity的诊断模型自身都已是森林，它可能含冗余边或padding。Balanced增量比较的也是同一固定接口的最小可行控制成本。
 
 这与前面最短见证约束下“可能需要cycle缩短多条路径”的结论并不矛盾：两个问题的约束方向不同。当前只是澄清模型、证明安全性边界和一个极小固定接口验证，还不是第三项已成立创新或真实基准加速。下一项仅验证一个具体候选：对违反强上限的simple path学习结构子句；除保留路径相接的正E前提，还必须保留路径顶点两两不等的前提，否则未来合并非相邻点可能令该路径不再simple。强对照将是整个已解码拓扑no-good，而非故意只与上游含辅助变量的完整SAT assignment阻断比较。先做小图子句正确性审查，再决定是否值得性能实验。
+
+### 13.20 长路径子句的小图核查与本阶段判断
+
+继续检查Mini原代码后发现 `PathLimitation.cpp:235–288`已有 `IncrementalAddLimitedPathConstraints`，会对过长路径产生所选文字/free-wire的局部排除子句；`main.cpp:300`调用处被注释。旧函数的pin/wire语义与收缩后的partition语义还需区分，但**普通“发现长路径、学习局部约束”已经有直接先例**，不能因默认路径未启用就当成空白，也不把修复/启用它列为第三创新。
+
+在当前E表示中，可用的sound解释必须同时保留路径相接关系及顶点不同关系。对此只做了独立小图检查，没有运行真实性能求解：152个至多6点配置，各枚举203个partition，共30,856次检查；文字一致DFS与“逐truth行＋顶点排列”的独立参考一致。472个去重guarded lemma在95,816次partition完成检查中零反例，实际排除1,916个完成且均有超H的可导通simple path。手工例还验证了：只保留正E会误拒非相邻点合并后已无长simple path的网络；加distinct前提后正确放行；同时含b/¬b的路径不视为可导通；检查预算耗尽必须UNKNOWN。全部在.44单核，约0.871秒、RSS18.9MiB，没有新增性能solver或大规模搜索。
+
+穷举范围是这些固定图/标签/H配置的全部partition，不是所有六点图，也不是一般规模的机械化证明。完整工件 `paper_phase/stack_path_core_audit_20261023/{README.md,summary.json,lemmas.jsonl}`，源码 `scripts/stack_path_core.py`、`scripts/audit_stack_path_core.py`。旧Mini函数阻断的是未收缩pin图中的path；新增wire不抹掉这种raw path，却可能使其在物理net商图上不再simple，所以不能混作同一checker。此处必要的distinct守卫是正确性细节，仍不足以单列创新。
+
+接口理论完整附件为 `paper_phase/stack_interface_review_20261023/接口理论审查.md`与`path_lemma审查.md`；固定图审核脚本 `audit_stack_meet_refinement_20261023.py`。这些结果确认了下一步需要解决的具体问题：强串联约束下，选择共同连接细分B和两色森林的联合可行性。已有profile库、普通path learning、net-ID和对称消除都应作为强控制；是否能在这些控制之上形成新的结构排除方法，尚无真实性能证据。
+
+本阶段没有把研究目标标为完成。已经确认的是50函数上的表示效率、若干可复核最优值/下界、两个oracle候选的失败，以及强stack扩展的反例和正确边界；尚未确认的是三个相对最近工作成立的创新点、较大困难函数上的稳定优势和完整物理设计价值。下一阶段若继续实现，应围绕上述联合可行性提出可证伪机制并与完整拓扑阻断等强对照比较；不再靠同一开发样本换排序、延长时间或重命名已有技巧来累积贡献数量。
