@@ -15,7 +15,7 @@
 - 用户追加授权：需要仿真软件、尤其商业软件时，可在 .24 执行相应仿真/验证；常规优化与算法实验仍在 .44。当前尚未调用商业工具。
 - 多代理分工：主代理负责研究判断、实验协调与本文；三个子代理分别承担算法/工件审查、文献查重、独立结果核验。阶段性更换分工，实验并发统一管理。已实际使用多代理并行工作。
 
-当前可读结论：已建立MiniTNtk及较新L2L的同域对照，独立枚举全部≤7边三输入开关网络，并把小函数下界用于四输入覆盖面测量；65,536个真值表中26,010个下界提高，但尚未证明完整流程加速。更具体的机会来自共同连接结构：两个cofactor各自的最小网络不一定能以相同预算共享实现。第一版SMT的parity3七边子问题超时，第二版纯SAT已解决并独立检查无解证明；全部22个三输入NP类的边界回归也与枚举结果一致。真实基准已整理为43个NSP代表和5个独立双向依赖开发函数。**这支持继续研究的价值判断，尚不支持顶会级成果或三个成立创新点。** 恢复后优先做四至六输入开发集的同域对照；历史负结果及已有工程控制完整保留。
+当前可读结论：已建立MiniTNtk及L2L的同域对照，完成≤7边三输入库和NP边界回归，并推进到真实开发函数。当前模型下ex271_o5和ex275_o1最优开关数均为12；ex271_o6已认证下界14，尚未找到14边网络。共享cofactor表示在一个开发查询上有额外加速：同solver、同资源/对称/代表性行控制下，Mini配置18秒UNKNOWN，直接partition约11.76秒、cofactor消元约2.17秒UNSAT。但资源表与经典控制解释了相当部分收益，尚不能外推普遍优势。完整背景oracle是已记录的端到端负结果。正在冻结38个未参与调试的NSP代表和新的EPFL局部函数评估，并只保留一个有明确假设的partial-background变体。**这仍是值得验证的研究候选，尚非顶会级成果，也未形成三个成立创新点。** 最新细节见第13节。
 
 ## 1. 为什么先选这个题目
 
@@ -864,3 +864,74 @@ Mini也补上可安全施加的同类控制：用原wire-selector表示每条开
 Mini＋必要文字＋全部三变量count cuts＋相同6维profile＋安全endpoint lex，在ex275/R11仍18.017秒UNKNOWN，增强CNF含78,738变量、578,847子句。这是一项超过已补同组对称控制的Mini配置的开发证据，仍只有一个实例；另做有限的literal-slot排序对照，防止把易受顺序影响的短时结果误当普遍优势。数据为 `resume_prefix_sym_{regression,perf,proof}_20261023/`、`resume_mini_profile_endpointlex_20261023/`与`resume_mini_endpointlex_correctness_20261023/`。
 
 需要保留另一限制：排除完整六输入函数不等于证明一个不可约六变量冲突。后续检查它的五输入cofactor是否已有更小的结构阻碍；若存在，应把全函数下界解释成较小证据的提升，而非夸大需要联合分析的变量数。
+
+### 13.8 排除表示、排序及输入行选择带来的混淆
+
+对Mini再做两个预先固定的slot排序控制：按变量交错排列正负literal，以及反向交错排列。保留全部共同资源约束和安全prefix，不继续搜索最有利的随机种子。ex275/R11分别18.479和18.019秒UNKNOWN。短预算仍可能受顺序影响，这只排除了这两个具体配置；不能声称排除所有可能的Mini优化。记录为 `resume_mini_slotorder_controls_20261023/`。
+
+随后实现**不消去control的单partition编码**：全部R条开关保留，只用一个共同连线partition，ON用reach、OFF用cut，加入相同精确literal预算与端点prefix。它与gluing的差别是是否将控制开关消去，而不是有没有等价类连线表示。12个已知真实SAT profile均在自由搜索下重新找到模型，耗时0.055–0.659秒，全truth BFS与CNF检查通过；两个小UNSAT profile另行DRUP VERIFIED。ex275/R11在全64行下仍18.273秒UNKNOWN，o6/R13为18.161秒UNKNOWN。前者约220,102变量、1,074,915子句，峰值327MiB。工件为 `direct_partition_sat.py`、`run_direct_partition_diagnostic_20261023.py`及`resume_direct_partition_20261023/`。
+
+还补上与已知单极性一致的代表性truth行。对固定literal profile，仅有正literal的变量单调递增，仅有负literal的变量单调递减，双极性变量保持不动。目标truth先核对该偏序的单调性；只保留极小ON行和极大OFF行即可覆盖其他行。未使用变量先核对无关性，但当前实现保守地保持该位不动。所有模型最终仍按全部truth行检查。这是经典单调性化简，必须三个方法共用，不能列为新创新。针对Mini原wire必须被ON-flow使用的要求，另证明保留每个极小ON行的一条路径并移除其他wire即可保持全部truth，因此缩减行不会错误排除网络。
+
+审查覆盖三输入的64种文字极性/缺失配置、256种truth，兼容目标对应125,932次候选truth比较；另有2,000个随机网络和12个真实SAT网络的路径保留、全truth BFS及固定结构CNF检查。实现为 `profile_representative_rows.py`，审查记录 `resume_profile_selected_rows_20261023/`。
+
+ex275/R11因此由64行缩为同样24行，得到以下匹配18秒预算的开发对照（证明输出关闭，包含构造及求解开销）。三种方法均将各自CNF交给PySAT Glucose3，Mini使用原核心导出的CNF；此处没有将MiniSAT与Glucose的差别混作编码收益：
+
+| 方法，均含同资源、精确profile、prefix与24行 | 结果 | 完整秒数 | 变量/子句数 |
+|---|---|---:|---:|
+| Mini原核心＋共同控制 | UNKNOWN | 18.110 | 33,258 / 231,149 |
+| 单partition，保留全部开关 | solver-UNSAT | 11.760 | 86,130 / 423,049 |
+| 双cofactor partition，消去control | solver-UNSAT | 2.168 | 详见逐查询JSON |
+
+这些performance CNF未全部另行生成新证明；该函数11边无解已由前一节全truth证明独立确立。o6/R13所有输入均双极性，没有这种行缩减，gluing仍18.039秒UNKNOWN。记录为 `resume_mini_profile_representative_rows_20261023/`、`resume_direct_partition_rows_20261023/`、`resume_gluing_representative_rows_20261023/`。
+
+这项消融修正了归因：partition表示加经典行缩减本身就能解掉这个实例，control消元在此基础上继续加速；不能把从Mini超时到2.168秒的全部差距都归给新的共享机制。至今仍只有开发样本证据，没有足够独立样本支持普遍优势。
+
+### 13.9 五输入解释与仍未解决的上界
+
+进一步核查发现ex275的六输入truth精确满足 `f=g(x0 OR x1,x2,x3,x4,x5)`，其中五输入g的truth为`0xfe03e0e2`，全部64行一致。R11唯一幸存profile投影为g的R10固定profile：正文字次数`[1,1,1,1,2]`，负文字次数`[0,1,1,1,1]`。该固定profile无解，性能轮1.921秒；另行证明全程4.817秒、DRUP VERIFIED。因此这里的六输入排除可解释为较小固定资源冲突的提升，不能称作不可约六输入发现，也不能据此断言g在所有其他profile下的最优值。
+
+对o6的12个五输入cofactor穷举输入置换与输入取反，没有任何一个与已知最优12边的o5 NP等价。另一方面，加入prefix后继续尝试o6的14边上界，在27个幸存预算之间预设均分90秒，各分支仍UNKNOWN，总90.116秒。不能把“没有找到14边网络”升级成14边无解，也不反复追加同类短重启。记录为 `resume_five_input_lift_20261023/`与`resume_o6_prefix_upper_20261023/`。
+
+### 13.10 控制接口oracle：可验证机制与端到端负结果
+
+一个可明确写出的接口界是：设两cofactor partition为P0、P1，meet为M，最少控制开关数为 `k=2B(M)−B(P0)−B(P1)`。将每个meet块视为P0块与P1块之间的一条二分关联边；非平凡连通分量含e条边、v个顶点，其贡献为2e−v，且至少e/2。因此发生改变的meet块至多2k个。它只约束控制接口，**不能说明整个综合问题关于k固定参数可解**：即使只需一条控制边，`f=x AND g`仍包含任意g的综合困难。partition距离公式、普通控制消元与图连通学习均有先例，不把这些重新命名为贡献。
+
+基于这个观察实现另一条精确路线：SAT master只生成固定保留文字的共同背景partition；对每个背景的全部truth行，oracle穷举给定极性最多0、1、2条控制边的所有端点选择。两条边时精确考虑串联组合，而非只对各单边结果做OR。若正反状态均可实现，则还原完整网络并逐truth BFS；否则给出覆盖**全部允许控制集合**的失败行集合。
+
+从失败行进一步构造区域排除子句：ON行背景只变得更分离时，原本无法接通的控制集合仍失败；OFF行背景只变得更连通时，原本错误接通的控制集合仍失败。将ON旧连通块之间的P变量加入正literal，将OFF旧块内由当前true P构成的生成森林加入负literal，即得到可供SAT学习的解释。它比仅排除一个完整背景assignment更广；但“更短解释”不保证搜索更快。普通路径/cut学习已有[MonoSAT](https://github.com/sambayless/monosat)等工作，此候选若要有贡献，需要证明跨多行、量化所有控制集合的解释带来额外效果。
+
+完整实现为 `interface_oracle_synthesis.py`，独立审查为 `audit_interface_oracle.py`。对候选失败mask去重、按连通块构造连通矩阵、优先检查控制预算较小状态，并在区域解释和完整assignment no-good对照中同时加入相同prefix。8个小固定profile全部得到正确决定；三个UNSAT例的全部新增oracle子句均经独立控制集合遍历检查，再对增广master生成DRUP并通过检查。parity7的固定profile例共7,606条lemma、414,226次独立控制集合检查。SAT全truth BFS。这里审查的是固定profile及其lemma，不自动覆盖所有文字预算。
+
+但两个真实难例o6/R13与ex275/R11中，区域解释与完整背景no-good对照均30秒UNKNOWN。优化后的区域版本已排除约19,379和22,633个完整背景，平均失败核仅约2行，仍没有端到端优势。此前开销分析显示，oracle枚举/失败核及背景矩阵构建占主要时间，master SAT本身并非唯一瓶颈。**完整背景枚举版本暂时停止；不能把小例证书通过当作真实问题已取得突破。** 全部记录及证明链在 `resume_interface_oracle_20261023/`，技术附件为该目录`机制审查与证书定义.md`。
+
+仅保留一个有具体因果假设的后续变体：在P尚未完全赋值时，ON行用“已true＋未赋值”构造乐观上界图，OFF行只用已true连线构造下界图；若即使如此仍无共同控制集合满足所有行，则可提前排除整个分支。使用CaDiCaL外部propagator时必须同时补同求解器的完整模型oracle对照，正确处理回溯、超时和子句检查。若仍不能减少真实难例的端到端时间，就停止此变体，而不是靠不断调参延续希望。
+
+查重补充：[AAAI2015 SAT Modulo Monotonic Theories](https://ojs.aaai.org/index.php/AAAI/article/view/9755)已给出基于单调性的传播与学习；[TACAS2024 DRAT Proofs of Unsatisfiability for SAT Modulo Monotonic Theories](https://link.springer.com/chapter/10.1007/978-3-031-57246-3_1)进一步给出theory lemma的DRAT认证、单侧定义及动态Horn上界。因此“partial图上下界传播”和“给理论子句生成证书”本身均不能独立算作本工作的创新。可能保留的差异必须具体到跨truth行共享有限控制边集合的联合必要条件，并以超过通用方法的效果验证。
+
+### 13.11 当前冻结评估计划
+
+目前还不能声称已经形成三个创新点。下一步首先检验泛化：43个NSP NP代表中，开发已用01、02、03、10、11，剩余38个作为未参与调试的评估集；在运行前固定manifest、源代码哈希、分支顺序、共同预处理及每函数每方法18秒总预算（20秒外部硬限）。比较Mini、单partition和cofactor消元三者，全部共用适用的有界六维profile过滤、代表性truth行与prefix。从共同必要下界向目录给出的n/n+1上界搜索，目录上界只是终止边界，不替代算法实际生成的SAT网络。某分支UNKNOWN不能升高已认证下界，只有全部分支UNSAT才能报告整预算无解。
+
+另外独立准备EPFL原始电路AIG的5/6叶cut函数层级，固定算术和控制电路各两个、每node保留cut数、按来源哈希选择及NP去重规则，不根据求解器输赢挑选。它衡量局部映射函数，不能与真实整电路输出混为一谈，也不代表已改善全芯片面积、时序或功耗。两项新评估的代码与选择规则在看到结果后不再修改；出现负结果照实保留。
+
+冻结NSP manifest为 `paper_phase/nsp_heldout_frozen_20261023/manifest.json`，SHA-256 `72883d3ce0815f49ffa95065f24418efc9b4db0ddd983ef4d5ad5d80f75adbe5`。38个固定ID为04、05、06、08、09、12–35、37、38、43–48、50（原始目录编号非连续）。37个源码/库/原Mini源码及driver二进制文件复制入`frozen_bundle`逐文件hash，外部PySAT扩展亦锁定hash；统一Glucose3。主程序 `nsp_frozen_evaluation.py`、共同预处理 `fixed_profile_evaluation_protocol.py`。先仅在已有开发NSP01/02做6项集成smoke，再执行114项评估。NSP目录多为单调函数，不能凭此一组结果代表双极性真实函数。
+
+EPFL新tier提取完成：从[官方benchmark仓库](https://github.com/lsils/benchmarks)固定commit `82d8cc6910419298e713a46644ed59fd3df53038`，取算术目录文件名排序前两个adder/bar，以及控制目录前两个arbiter/cavlc。四个已有原始AIG均与官方固定版本SHA一致，原目录始终只读。每node至多16个cut、K=6，按固定规则截断；候选要求全部叶子essential、至少一个双极性变量；每电路每5/6叶分层最多2项，按固定来源哈希排序并全局NP去重，排除已有whole-output类。
+
+实际得到12个函数：adder/bar/cavlc各4，5/6输入各6；arbiter无合格候选，保留空缺，没有事后换电路。所有32/64行均通过独立标量AIG仿真，保存cone重建再次通过，所有root可达原主输出。多数只有1–2个双极性变量，仅一个五输入函数全双极性，运行前不称它们为难例。cut的叶信号在局部truth中视为独立变量，不利用原电路可能存在的相关性或don't-care。
+
+工件 `paper_phase/epfl_cut_tier_20261023/`，manifest SHA-256 `a9fa0175281a391b9b02455a2c9bdbb62144854d4cd9fb4ce8e9d3444ef068cf`，functions SHA-256 `3eb0388ca0f5e4f40c1a9fe0cccbced24c2c9d666d8ea18c949a81553835cfb4`。提交文档不附带原AIG；本地归档保留MIT许可证与来源。尚未运行该tier综合时预定：沿用冻结三个编码及控制，从必要literal下界搜索至下界+2，每函数每方法18秒；找不到只报告该区间UNKNOWN，不能推断整体不可实现。
+
+### 13.12 Partial背景传播完成：停止该候选的依据
+
+安装环境PySAT 1.9.dev17的CaDiCaL195外部Propagator接口实际可用。实现固定频率 `max(4,ceil(P变量数/8))` 个新赋值后检查partial，同时始终检查完整模型；保持相同solver、prefix、固定profile及控制oracle，以full-model模式作对照。CaDiCaL195不支持interrupt，因此每256个conflict分段solve_limited，callback记录截止状态，外部32秒硬限；任何截止后未经验证的返回均覆盖为UNKNOWN。代码 `partial_interface_oracle.py`、独立检查 `audit_partial_interface.py`。
+
+两模式小回归各8/8符合预期；parity7固定profile的UNSAT由full的2.030秒降至partial的0.792秒，parity8 SAT却从1.642秒变为3.792秒。两模式各3个UNSAT的全部lemma都逐控制集合直接图遍历检查，增广master DRUP也全部VERIFIED；10个SAT模型全部truth BFS。完整证明链仅覆盖这些小例；真实UNKNOWN只做包含partial/full两类lemma的固定抽查，没有冒充完整证书。
+
+| 真实固定profile查询 | 同CaDiCaL full-model | 同CaDiCaL partial |
+|---|---|---|
+| ex271_o6 R13，首幸存profile | UNKNOWN / 30.177秒 | UNKNOWN / 30.138秒 |
+| ex275_o1 R11，唯一幸存profile | UNKNOWN / 30.179秒 | UNKNOWN / 30.124秒 |
+
+o6的partial冲突共6,148次，发生时平均92.66%的P变量已赋值，中位93.94%；ex275有5,291次，平均93.59%、中位95.42%。两例各仅2次冲突发生在≤50%赋值时。说明乐观图松弛尚不能足够早地识别不可能背景；并非没有调用传播。背景连通矩阵构建约占22/30秒。即使以后用更快语言降低该开销，也不能据此预言更强剪枝或新算法贡献。**当前partial版本没有真实端到端收益，按预定标准停止，不继续调触发频率、随机种子或无限延长时限。** 工件 `paper_phase/resume_partial_interface_20261023/`保存源码hash、逐例结果、lemma和检查报告。
