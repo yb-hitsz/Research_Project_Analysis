@@ -15,7 +15,7 @@
 - 用户追加授权：需要仿真软件、尤其商业软件时，可在 .24 执行相应仿真/验证；常规优化与算法实验仍在 .44。当前尚未调用商业工具。
 - 多代理分工：主代理负责研究判断、实验协调与本文；三个子代理分别承担算法/工件审查、文献查重、独立结果核验。阶段性更换分工，实验并发统一管理。已实际使用多代理并行工作。
 
-当前可读结论：已建立MiniTNtk及L2L的同域对照，完成≤7边三输入库和NP边界回归，并推进到真实开发函数。当前模型下ex271_o5和ex275_o1最优开关数均为12；ex271_o6已认证下界14，尚未找到14边网络。共享cofactor表示在一个开发查询上有额外加速：同solver、同资源/对称/代表性行控制下，Mini配置18秒UNKNOWN，直接partition约11.76秒、cofactor消元约2.17秒UNSAT。但资源表与经典控制解释了相当部分收益，尚不能外推普遍优势。完整背景oracle是已记录的端到端负结果。正在冻结38个未参与调试的NSP代表和新的EPFL局部函数评估，并只保留一个有明确假设的partial-background变体。**这仍是值得验证的研究候选，尚非顶会级成果，也未形成三个成立创新点。** 最新细节见第13节。
+当前可读结论：已建立MiniTNtk及L2L的同域对照、完整小函数库和边界回归，并完成冻结的38个NSP代表＋12个EPFL真实电路局部函数评估，共150项性能运行。相同求解器/控制/预算下，两种partition方法均完成50/50，Mini配置完成44/50；但单partition与cofactor消元整体接近，NSP上前者反而更快，因此主要收益应归于表示方式。开发集仅ex275/R11展示明显额外消元收益；新增net-ID强控制又将直接编码从约11.76秒降至6.99秒，cofactor约2.17秒仍只是单例，不能外推。当前模型下ex271_o5、ex275_o1最优均12，ex271_o6已认证下界14、14边上界仍未找到；EPFL新增8边最优例已获独立证书，6个Mini未完成例的已知解均可嵌入其编码。完整及partial背景oracle都无真实端到端收益，已停止。正在审查更强串联长度限制下的接口细分与路径解释，先做正确性及极小验证。**目前有可复核的算法效率改进，尚未确认足以形成顶会论文的原创机制，更未形成三个成立创新点。** 最新细节见第13节。
 
 ## 1. 为什么先选这个题目
 
@@ -915,7 +915,9 @@ ex275/R11因此由64行缩为同样24行，得到以下匹配18秒预算的开�
 
 另外独立准备EPFL原始电路AIG的5/6叶cut函数层级，固定算术和控制电路各两个、每node保留cut数、按来源哈希选择及NP去重规则，不根据求解器输赢挑选。它衡量局部映射函数，不能与真实整电路输出混为一谈，也不代表已改善全芯片面积、时序或功耗。两项新评估的代码与选择规则在看到结果后不再修改；出现负结果照实保留。
 
-冻结NSP manifest为 `paper_phase/nsp_heldout_frozen_20261023/manifest.json`，SHA-256 `72883d3ce0815f49ffa95065f24418efc9b4db0ddd983ef4d5ad5d80f75adbe5`。38个固定ID为04、05、06、08、09、12–35、37、38、43–48、50（原始目录编号非连续）。37个源码/库/原Mini源码及driver二进制文件复制入`frozen_bundle`逐文件hash，外部PySAT扩展亦锁定hash；统一Glucose3。主程序 `nsp_frozen_evaluation.py`、共同预处理 `fixed_profile_evaluation_protocol.py`。先仅在已有开发NSP01/02做6项集成smoke，再执行114项评估。NSP目录多为单调函数，不能凭此一组结果代表双极性真实函数。
+冻结NSP manifest实际执行版为 `paper_phase/nsp_heldout_frozen_20261023_v2/manifest.json`，SHA-256 `d75d4b7fd572561d9798c1274bc06993a33c4bd85613f5c2b1c9dac23e79624c`。初版`nsp_heldout_frozen_20261023/manifest.json`（hash `72883d3ce0815f49ffa95065f24418efc9b4db0ddd983ef4d5ad5d80f75adbe5`）未启动任何solver即被审查修订版替代；v2仅澄清计时并增加记录/截止guard：**18秒为含预处理和构造的求解软截止，SAT验证允许使用20秒进程总硬限内的余量**，统一记录实际耗时、完成时刻及是否在18秒内，不声称所有验证严格在18秒内结束。
+
+38个固定ID为04、05、06、08、09、12–35、37、38、43–48、50（原始目录编号非连续）。37个源码/库/原Mini源码及driver二进制文件复制入`frozen_bundle`逐文件hash，外部PySAT扩展亦锁定hash；统一Glucose3。主程序 `nsp_frozen_evaluation.py`、共同预处理 `fixed_profile_evaluation_protocol.py`。已有开发NSP01/02的6项集成smoke全部找到最优5并通过CNF与全truth BFS，单项0.062–0.119秒，随后启动114项评估。NSP目录多为单调函数，不能凭此一组结果代表双极性真实函数。
 
 EPFL新tier提取完成：从[官方benchmark仓库](https://github.com/lsils/benchmarks)固定commit `82d8cc6910419298e713a46644ed59fd3df53038`，取算术目录文件名排序前两个adder/bar，以及控制目录前两个arbiter/cavlc。四个已有原始AIG均与官方固定版本SHA一致，原目录始终只读。每node至多16个cut、K=6，按固定规则截断；候选要求全部叶子essential、至少一个双极性变量；每电路每5/6叶分层最多2项，按固定来源哈希排序并全局NP去重，排除已有whole-output类。
 
@@ -935,3 +937,85 @@ EPFL新tier提取完成：从[官方benchmark仓库](https://github.com/lsils/be
 | ex275_o1 R11，唯一幸存profile | UNKNOWN / 30.179秒 | UNKNOWN / 30.124秒 |
 
 o6的partial冲突共6,148次，发生时平均92.66%的P变量已赋值，中位93.94%；ex275有5,291次，平均93.59%、中位95.42%。两例各仅2次冲突发生在≤50%赋值时。说明乐观图松弛尚不能足够早地识别不可能背景；并非没有调用传播。背景连通矩阵构建约占22/30秒。即使以后用更快语言降低该开销，也不能据此预言更强剪枝或新算法贡献。**当前partial版本没有真实端到端收益，按预定标准停止，不继续调触发频率、随机种子或无限延长时限。** 工件 `paper_phase/resume_partial_interface_20261023/`保存源码hash、逐例结果、lemma和检查报告。
+
+### 13.13 多control扩展为何不能直接套用现有公式
+
+纯理论审查明确了一个边界。若所有节点都可见、不允许隐藏节点，对两个control的四个目标partition P_ab，定义 `Qx_a=P_a0∧P_a1`、`Qy_b=P_0b∧P_1b`，则存在相应开关网络，当且仅当每个状态满足 `P_ab=Qx_a∨Qy_b`。必要性来自每条x_a边的两端在两个y状态中均须相连，y同理；充分性是在各Q块中加入相应literal的生成树。全状态meet M已包含在各Q中，可免费保留而不改变判据。这是存在性判据，并不是最低成本公式。
+
+允许隐藏节点后，最小反例只需两个可见端点、一个隐藏点、两条串联边x和y。只有11状态接通，四个Q却都离散，因此上述可见partition判据会错误拒绝一个两边网络。代数原因是“限制到可见节点”不与partition join交换。两可见端点的16种两输入状态函数中，零隐藏点只能实现10种OR-of-literals/常量；其余4种minterm及XOR/XNOR均需要隐藏点，一个隐藏点加允许的平行边已足够。单control下的隐藏点消除证明不能直接推广。
+
+即使没有隐藏点，也不能将各Q的树rank简单相加计算成本。三可见点s,u,t，取三条边 `{x:s–u, y:u–t, ¬y:s–t}`，已有3边实现；Qx_1全连通rank为2，Qy_0和Qy_1各rank为1，简单相加却为4，因为一些连接由不同状态下的替代路径共同产生。完整短证明见 `paper_phase/resume_mechanism_20261023/multi_control_boundary_note.md`。这些反例用于约束下一步推导，不声称是原创定理，也未据此启动新的大规模搜索。
+
+### 13.14 冻结NSP留出评估完成：收益主要来自partition表示
+
+38函数×3方法共114项完成，零worker错误。函数包含5个五输入、33个六输入；未根据这批结果修改策略、分支顺序或超时。113个SAT结果均检查每个CNF子句及全部truth行BFS，唯一UNKNOWN来自Mini的NSP18。`OPTIMUM_FOUND`表示完整覆盖下界与新构造上界相等；本轮求解关闭proof，因此涉及solver-UNSAT的下界仍为solver-only，不冒充所有最优性均已DRUP认证。
+
+| 方法 | 找到最优网络 / 38 | UNKNOWN | worker中位秒数 | 全部进程累计秒数 | 峰值MiB |
+|---|---:|---:|---:|---:|---:|
+| Mini原核心＋共同控制 | 37 | 1 | 4.523 | 197.007 | 62.8 |
+| 单partition＋共同控制 | 38 | 0 | 0.146 | 9.200 | 47.2 |
+| cofactor消元＋共同控制 | 38 | 0 | 0.166 | 10.444 | 44.8 |
+
+共同完成的37例，以实际全进程时间计算，单partition相对Mini的几何平均加速15.09倍，cofactor为13.55倍。不能仅报这个大比值：在二者直接比较的38例中，单partition快24例，cofactor快14例，且本批绝对时间已经很短，解释器启动、库加载等占相当比例。本结果支持**共同控制下partition类表示比当前Mini编码更高效**，但不支持**cofactor消元普遍优于不消元**。直接net/partition的表示思想已有近年工作，也不能因为快15倍就把它单独包装成全新论文机制。两批表中RSS为Python worker记录值，不是含Mini导出子进程的进程树峰值；没有据此提出内存优势结论。
+
+NSP18中Mini已完成6边无解、下界为7，但18秒内未找到7边网络；另外两种方法约0.145/0.159秒找到7边模型。其余已完成函数均达到目录标注计数，但目录数字本身没有替代模型构造和下界证明。小目录、单调性和已知低开关数限制了外推，不能用于宣称已覆盖一般双极性网络，更不能用于芯片PPA结论。
+
+完整逐例表、实际进程时间、全部SAT模型及统计在 `paper_phase/nsp_heldout_frozen_20261023_v2/{REPORT.md,aggregate.json,results/}`。据此保持原定EPFL评估协议继续，而不是在NSP上调pivot/种子获得更好数字。
+
+### 13.15 新公开先例：TransiLog不是纯愿景，也不是同成本精确基线
+
+读完LATTE2026三页原文 [A Position on Language Abstraction for Custom Circuit Design](https://capra.cs.cornell.edu/latte26/paper/latte26-final8.pdf)，并由[作者主页](https://zsisco.net/)定位到[公开TransLog-Demo](https://github.com/Boucii/TransLog-Demo/tree/demo-public)。它已有结构DSL、晶体管级e-graph rewrite和prototype实验，不应误写成只有设想。原文较早版本报告NSP53合计395只、约三分钟；当前代码pin `0d126d82d882ee035f3d5812d54ca9f9559728c7`附带逐例报告为367只、16.379秒。这是作者存档结果，本轮没有独立运行，也不能跨机器与我们的时间比。来源：[固定版NSP report](https://github.com/Boucii/TransLog-Demo/blob/0d126d82d882ee035f3d5812d54ca9f9559728c7/NetlistOpt/rpt/nsp53_orig_dnf_best_report.txt)。
+
+公开demo含Rust源码、Cargo.lock、NSP53和3984个四输入P-class输入及结果，但README明确没有公开delay/simulation/SPICE流程，当前文件树未见LICENSE/package license，故这里只读审查，不称已核验宽松许可。[固定版README](https://github.com/Boucii/TransLog-Demo/blob/0d126d82d882ee035f3d5812d54ca9f9559728c7/README.md)。它可作为后续启发式上界候选，不能直接当同域最优值基线：`join`用于组装PUN/PDN，`!`计2只反相器并考虑cell共享；我们的join是边界pin等价关系并集闭包，当前输入反相免费、仅单网络。NSP流any-root和四输入流cell-root也不同。[作者语义定义](https://github.com/Boucii/TransLog-Demo/blob/0d126d82d882ee035f3d5812d54ca9f9559728c7/NetlistOpt/doc/semantics.md)。
+
+代码的`shannon-reduction`只是`xy+x¬y→x`，另有bridge改写等，没有在核查版本中看到本文的cofactor-pair边界partition、单control隐藏点消除及rank成本覆盖；这限定了直接重合范围，不能据“未见”就认定我们新颖。[固定版规则](https://github.com/Boucii/TransLog-Demo/blob/0d126d82d882ee035f3d5812d54ca9f9559728c7/NetlistOpt/src/rules.rs)。其context-DP/fixed-point提取文档也区分局部去重、未精确收敛fallback；e-graph内的minimum提取不等于所有网络拓扑的最优证明。[提取器说明](https://github.com/Boucii/TransLog-Demo/blob/0d126d82d882ee035f3d5812d54ca9f9559728c7/NetlistOpt/doc/min_transistor_fixed_point_extractor.md)。因此“加入网络rewrite/equality saturation/cell共享”不能作为新的第三创新点。完整只读记录在 `paper_phase/transilog_review_20261023/技术附件.md`。
+
+### 13.16 冻结EPFL局部函数评估完成
+
+新的12函数×3方法共36项完成，零worker错误。wrapper从NSP v2冻结bundle按hash复制三个编码、共同控制、库和Mini driver，只有来源元数据与搜索区间变为预先指定的LB至LB+2，余量0/1/2完整枚举；没有根据NSP结果调编码。44个文件锁定hash，manifest为 `paper_phase/epfl_interval_frozen_20261023/manifest.json`，SHA-256 `c6d049a8b0189a38399cd26e47dba1b310e7285cd9fe35292b86144582898a5b`。全部三层profile/rows准备成本即使在首层SAT也照计入，三法相同。
+
+| 方法 | 找到最优网络 / 12 | UNKNOWN | worker中位秒数 | 全进程累计秒数 | 峰值MiB |
+|---|---:|---:|---:|---:|---:|
+| Mini原核心＋共同控制 | 7 | 5 | 3.559 | 100.013 | 143.8 |
+| 单partition＋共同控制 | 12 | 0 | 0.125 | 3.916 | 133.1 |
+| cofactor消元＋共同控制 | 12 | 0 | 0.113 | 3.485 | 98.8 |
+
+Mini未完成的五项为adder_n5_2、adder_n6_1、adder_n6_2、bar_n6_2、cavlc_n6_2。其中adder_n5_2是本tier全双极性的五输入函数，两种partition法分别1.415/1.052秒构造10边网络，达到必要literal下界；Mini18秒UNKNOWN。cavlc_n6_2的必要下界为7，两种partition法先排除7边、再构造8边模型，分别0.201/0.215秒；这条非平凡下界在性能轮仍solver-only，正另行独立审查。其他11个函数均在必要下界构造网络。所有SAT检查全部CNF与全truth BFS。
+
+cofactor法在12例中快8例，但全进程几何平均仅约1.056倍；单例时间很短，不能由此推断稳定优势。NSP和EPFL共同支持表示方式的搜索效率收益，尚未证明消元机制广泛带来额外提升。两批合计150项性能运行，不包含单独的smoke、proof及模型可表示性检查；它们是小规模精确综合任务，不是面积/时序改善的完整电路实验。逐例报告与模型在 `paper_phase/epfl_interval_frozen_20261023/{REPORT.md,aggregate.json,results/}`。
+
+为进一步排除基线适配问题，正在把两批中Mini未完成的6个函数的direct已知SAT网络固定进相同Mini CNF，检查slot对应、路径裁剪、prefix后辅助变量是否仍可满足。这只检查配置能否表示已知解，不把带答案的求解计入算法性能。此外，另建明确同域的net-ID控制，与近年terminal-to-net表示接近，检验两个较难开发查询中的cofactor收益是否还能由更直接的等价关系编码解释；它不是Free-Topology论文的复现，也不计作新创新。
+
+### 13.17 新结果的独立证书与Mini可表示性审查
+
+EPFLcut_cavlc_n6_2的7边下界已完成独立认证。两种partition编码分别在独立proof轮生成DRUP，drat-trim均VERIFIED，完整进程0.681/0.632秒；变量/子句数与对应性能轮一致。R7只有一个必要literal profile、没有被库过滤的其他预算，使用8个经单调性证明充分的代表行。因此证据链为：必要literal覆盖唯一7边预算、代表行等价性、两个编码各自的完整性、DRUP无解检查；8边上界来自全部64行BFS。**该局部函数在当前模型下最优值为8**。证书检查不混入§13.16的性能数据，目录 `paper_phase/epfl_cavlc_lower_bound_certificate_20261023/`。
+
+另外，两批中Mini未完成的6个函数，其direct见证全部成功嵌入同配置Mini CNF。具体操作为：按固定文字槽对应端点；保留各代表ON行一条路径的wire并集；按原prefix安全定向；裁剪前后均全truth BFS；固定全部wire与label，只让辅助变量自由，并验证返回model满足每个CNF子句。6/6均REPRESENTABLE_SAT，完整检查每例0.271–0.982秒，辅助SAT约1–5毫秒。
+
+其中5例对应Mini超时的相同R与profile；cavlc_n6_2检查的是8边见证，而Mini性能轮尚停在7边未知，明确不混作相同固定预算。该审查排除了“这些新见证被基线适配意外排掉”的解释；它不是完整的编码等价证明，也不是让Mini从零找网络的速度结果。全部映射、wire裁剪、CNF及BFS证据保存在 `paper_phase/frozen_mini_witness_embedding_20261023/`。
+
+### 13.18 更强的net-ID控制及先例边界
+
+[Free-Topology作者工件](https://github.com/b8kang/Free-Topology-TNS-ICCAD2026/tree/441d7cc5c1e588cb0d2ef599da65793fa4db7d86)没有完整综合源码，但正文已有terminal-to-net、编号及朝向约束；L2L源码也已有端点到net的整数表示。两者包含完整CMOS或节点使用/anchor等条件，不能直接照搬成当前单网络、固定profile问题。尤其声明较多net并假定可闲置，与原来的“所有internal net均使用”条件不同；某些先按gate排序的slot，也不能再无证明地强制首尾slot锚定在电源/输出。完整审查在 `resume_partial_interface_20261023/FreeTopology与terminal_net编码审查.md`，只审查作者公开内容，不称已检查不存在的源码。
+
+据此独立实现**同域net-ID控制**，不是复现上述论文：为每个pin选择一个net ID，将E定义为ID相等，替代显式三元组传递性。最多2R+2个标签足以容纳全部pin partition，内部ID按首次出现顺序编号；先满足E上的端点prefix，再按最终pin顺序重命名net，不改变E，因此两种对称控制相容。其余固定profile、代表行、ON reach/OFF cut、onehot文字变量、g3全部保持。常一允许源汇同net，单独处理。编码为 `direct_partition_netid.py`，SHA-256 `5f1d12f8a6943601489cf2af3725b0de3650c1ba96a68d8d0b957485ca75f4d8`。
+
+12个已知开发SAT结构固定E后的可扩展性检查全部通过；另对相同12个profile自由搜索，12/12重新找到模型，0.049–0.362秒，CNF、文字计数及全truth BFS全部通过。两个小UNSAT固定profile另获DRUP VERIFIED，零边常零/常一也通过。这些是正确性回归，不能混入真实难例的性能统计。
+
+两个既有开发查询的18秒求解软限/20秒硬限结果：ex275/R11为6.992秒solver-UNSAT，峰值157.7MiB；o6/R13为18.091秒UNKNOWN，首profile耗尽总预算，不能声称整个R13已排除，峰值408.4MiB。前者比原direct约11.760秒更快，但仍慢于cofactor约2.168秒。它说明已知net表示解释了部分收益，当前仍只有一个开发实例的额外消元差距，不能按单次测量宣称稳定倍数。没有用此编码重新调NSP/EPFL，也没有事后向留出表追加有利个例；本轮不继续调参。完整工件 `paper_phase/resume_direct_netid_20261023/`。
+
+### 13.19 串联长度方向的新检查：必须区分两种问题
+
+继续寻找与实际网络约束有关的切口时，核对[MiniTNtk原文§IV-B](https://fchxwh.github.io/preprint/ICCAD_2023_MiniTNtk__An_Exact_Synthesis_based_Method_for_Minimal_Transistor_Network_Generation.pdf)及源码发现：Eq.(15)只要求每个ON输入存在一条长度≤H的选中flow；随后程序另枚举全部文字一致、可能同时导通的simple源汇路径，检查其中最长者≤H。后者严格更强。上游最多检查50轮、每次阻断整个SAT assignment，超过后可能增加R，所以这段有限流程不能自动作为带stack的最优性证明。该限制不影响本文此前明确关闭stack的实验。
+
+源码的CLI第5参数是depth开关，H实际由onset SOP的最长项决定，并非直接读用户给定数值；当前thin exporter没有H。给新exporter调用公开的 `CreateKLimitedPathConstraints(H)`只能重用前置短flow条件，不能声称复现了最终的完整stack语义。精确行号与手工例子见 `paper_phase/stack_semantics_static_review_20261023/README.md`。本文后续分别称“最短导通见证上限”和“所有可导通simple path上限”，不混用。
+
+隐藏的同色control星形节点可通过收缩一条开启边消除；新simple path可以提升回旧simple path，长度不会变短，因此这一步对强上限仍安全。但此前把共同免费连线直接取最大meet M的做法**不保持强上限**。一个固定接口反例只需五点a,b,c,d,u，源c、汇b：控制+x边a–c、c–b；控制¬x边a–d、d–b；保留三条+y边c–d、d–u、u–a。原truth为x OR y，所有可导通simple源汇路径最长2；两个control状态的meet却把a、b放入同块。免费识别a=b后，纯y路径c–d–u–a(=b)长3。新增控制边无法删除这条路径，所以这不是补边就能修复的问题。
+
+这只否定固定保留结构下的安全变换，不是证明函数本身需要7边；x OR y全局仅需两条并联边且H=1即可。为独立核实，在.44穷举该固定接口的全部10种森林组合：B=M时唯一组合控制成本2，最短见证H2通过、强H2失败；B将a/b分开时9组合均控制成本4，最短H2有6个通过、强H2仅1个通过。所有组合×四输入的truth均为0xe，DFS与独立有序点子集逐path检查完全一致。该验证约0.0016秒、RSS约13MiB，未调用solver。记录为 `paper_phase/stack_interface_review_20261023/fixed_counterexample_full_enumeration.json`。
+
+由此得到的精确局部形式是：保留共同partition B为M的细分，不能强制B=M。固定B、P0、P1，**若存在强stack可行控制图**，则可逐状态删除控制cycle而保持其closure，全部输入的功能不变、simple paths只会减少。因此存在每色都是B商图森林的可行代表，最少控制边恰为 `2|B|−|P0|−|P1|`；仍须寻找符合强约束的具体森林，不能任取生成树。相对最大meet的rank下界，细分额外代价为 `2(|B|−|M|)`，两极性各增同数。该等式仅适用于固定保留图和固定两状态partition，不能推广成任意函数最优网络之间的偶数差。
+
+这里的forest结论针对成本最小化或≤预算问题，允许删去冗余控制边；不表示每个强制精确literal multiplicity的诊断模型自身都已是森林，它可能含冗余边或padding。Balanced增量比较的也是同一固定接口的最小可行控制成本。
+
+这与前面最短见证约束下“可能需要cycle缩短多条路径”的结论并不矛盾：两个问题的约束方向不同。当前只是澄清模型、证明安全性边界和一个极小固定接口验证，还不是第三项已成立创新或真实基准加速。下一项仅验证一个具体候选：对违反强上限的simple path学习结构子句；除保留路径相接的正E前提，还必须保留路径顶点两两不等的前提，否则未来合并非相邻点可能令该路径不再simple。强对照将是整个已解码拓扑no-good，而非故意只与上游含辅助变量的完整SAT assignment阻断比较。先做小图子句正确性审查，再决定是否值得性能实验。
